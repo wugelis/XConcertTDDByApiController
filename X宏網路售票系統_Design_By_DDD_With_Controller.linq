@@ -5,13 +5,36 @@
 
 async Task Main()
 {
-	//Func<OutsideAPIController, Task<IEnumerable<Person>>> expression = c => c.GetPersons();
-	//await RunAPIController.GetJSON<Person>(expression).Dump();
+	// Test_GetPerson
+	// Arrange
+	Func<OutsideAPIController, Task<IEnumerable<Person>>> expression = c => c.GetPersons();
+	IEnumerable<Person> expected = new[] 
+	{ 
+		new Person() { ID = 1, Name = "Gelis Wu" }
+	};
+	IEnumerable<Person> actual;
+	
+	// Act
+	actual = JsonSerializer.Deserialize<IEnumerable<Person>>(await RunAPIController.GetJSON<Person>(expression));
+	//actual.Dump();
+	
+	// Assert
+	actual.First().Compare(expected.First()).Dump();
 
+	// Test_GetIdentityUser
+	// Arrange
 	Func<OutsideAPIController, Task<string>> expression2 = c => c.GetIdentityUser();
-	//await RunAPIController.GetJSON<string>(expression2).Dump();
+	string expected2 = "\"gelis\"";
+	string actual2;
 	
+	// Act
+	actual2 = await RunAPIController.GetJSON<string>(expression2);
 	
+	// Assert
+	(actual2 == expected2).Dump();
+	
+	/*
+	// Test_GetIdentityUser
 	// Arrange
 	FakeOutsideAPIController target = new FakeOutsideAPIController();
 	string actual;
@@ -22,7 +45,7 @@ async Task Main()
 	
 	// Assert
 	(actual == expected).Dump();
-	
+	*/
 }
 
 public class FakeOutsideAPIController
@@ -30,6 +53,14 @@ public class FakeOutsideAPIController
 	public async Task<string> GetIdentityUser(Func<OutsideAPIController, Task<string>> expression)
 	{
 		return await RunAPIController.GetJSON<string>(expression);
+	}
+}
+
+public static class P
+{
+	public static bool Compare(this Person p, Person target)
+	{
+		return p.ID == target.ID && p.Name == target.Name;
 	}
 }
 
