@@ -6,10 +6,11 @@
 async Task Main()
 {
 	//Func<OutsideAPIController, Task<IEnumerable<Person>>> expression = c => c.GetPersons();
-	//RunAPIController.GetJSON<Person>(expression).Dump();
+	//await RunAPIController.GetJSON<Person>(expression).Dump();
 
 	Func<OutsideAPIController, Task<string>> expression2 = c => c.GetIdentityUser();
-	//RunAPIController.GetJSON<string>(expression2).Dump();
+	//await RunAPIController.GetJSON<string>(expression2).Dump();
+	
 	
 	// Arrange
 	FakeOutsideAPIController target = new FakeOutsideAPIController();
@@ -21,6 +22,7 @@ async Task Main()
 	
 	// Assert
 	(actual == expected).Dump();
+	
 }
 
 public class FakeOutsideAPIController
@@ -31,33 +33,38 @@ public class FakeOutsideAPIController
 	}
 }
 
-public class OutsideAPIController: OutsideBaseApiController
+#region 測試目標
+
+public class OutsideAPIController : OutsideBaseApiController
 {
-	private IUserService _userService;
-	private IUriExtensions _uriExtensions;
-	private IHttpContextAccessor _httpContextAccessor;
-	
+	private readonly IUriExtensions _uriExtensions;
+	private readonly IHttpContextAccessor _httpContextAccessor;
+	private readonly IUserService _userService;
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="logger"></param>
+	/// <param name="userService"></param>
+	/// <param name="uriExtensions"></param>
+	/// <param name="httpContextAccessor"></param>
 	public OutsideAPIController(
-			ILogger<OutsideBaseApiController> logger,
-			IUserService userService,
-			IUriExtensions uriExtensions,
-			IHttpContextAccessor httpContextAccessor)
+		ILogger<OutsideBaseApiController> logger,
+		IUserService userService,
+		IUriExtensions uriExtensions,
+		IHttpContextAccessor httpContextAccessor)
+		: base(logger, userService, httpContextAccessor)
 	{
 		_userService = userService;
 		_uriExtensions = uriExtensions;
 		_httpContextAccessor = httpContextAccessor;
 	}
 
+	/// <summary>
+	/// 範例程式（需要驗證）
+	/// </summary>
+	/// <returns></returns>
 	[NeedAuthorize]
-	[APIName("GetIdentityUser")]
-	[ApiLogException]
-	[ApiLogonInfo]
-	public async Task<string> GetIdentityUser()
-	{
-		return await Task.FromResult(_userService.IdentityUser);
-	}
-
-	[NeedAuthorize]
+	[HttpGet]
 	[APIName("GetPersons")]
 	[ApiLogException]
 	[ApiLogonInfo]
@@ -68,20 +75,51 @@ public class OutsideAPIController: OutsideBaseApiController
 				new Person()
 				{
 					ID = 1,
-					Name = "Gelis Wu",
-					Title = "資深.NET技術顧問",
-					CreateDate = DateTime.Now
+					Name = "Gelis Wu"
 				}
 		});
 	}
+
+	/// <summary>
+	/// 取得 Current Identity Id
+	/// </summary>
+	/// <returns></returns>
+	[NeedAuthorize]
+	[APIName("GetIdentityId")]
+	[ApiLogException]
+	[ApiLogonInfo]
+	public async Task<decimal?> GetIdentityId()
+	{
+		return await Task.FromResult(_userService.IdentityId);
+	}
+
+	/// <summary>
+	/// 取得 Current Identity Id
+	/// </summary>
+	/// <returns></returns>
+	[NeedAuthorize]
+	[APIName("GetIdentityUser")]
+	[ApiLogException]
+	[ApiLogonInfo]
+	public async Task<string> GetIdentityUser()
+	{
+		return await Task.FromResult(_userService.IdentityUser);
+	}
 }
 
-public class OutsideBaseApiController { }
+#endregion
+
+public class OutsideBaseApiController
+{
+	public OutsideBaseApiController() {}
+	public OutsideBaseApiController(ILogger<OutsideBaseApiController> logger, IUserService userService, IHttpContextAccessor httpContextAccessor) {}
+}
 public interface IHttpContextAccessor { }
 public interface IUriExtensions { }
 public interface IUserService 
 {
-	string IdentityUser {get;}
+	string IdentityUser { get; }
+	decimal? IdentityId { get; }
 }
 public interface ILogger<T> { }
 
@@ -92,6 +130,9 @@ public class UserService : IUserService
 {
 	private string _identityUser = "gelis";
 	public string IdentityUser { get => _identityUser; private set => _identityUser = value; }
+
+	public decimal? _identityId;
+	public decimal? IdentityId { get => _identityId; private set => _identityId = value; }
 }
 public class NeedAuthorize : Attribute { }
 public class APIName : Attribute 
@@ -100,6 +141,7 @@ public class APIName : Attribute
 }
 public class ApiLogException : Attribute { }
 public class ApiLogonInfo : Attribute { }
+public class HttpGet : Attribute { }
 
 public class Person
 {
